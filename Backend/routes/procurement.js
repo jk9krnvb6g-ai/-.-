@@ -27,8 +27,12 @@ const query = (sql, params) => new Promise((resolve, reject) => {
     });
 });
 
-// Ensure procurement_id exists on receivings and considerations safely
-setTimeout(async () => {
+// ==========================================
+// 🛡️ CONTROLLED AUTO-MIGRATION (SAFEGUARD)
+// ==========================================
+// Encapsulated function: will NEVER execute automatically on Gateway module require().
+// Protects production database schema and records from unexpected DDL/ALTER execution.
+const runAutoMigration = async () => {
     try { await query('ALTER TABLE receivings ADD COLUMN procurement_id VARCHAR(50)'); } catch (e) {}
     try { await query('ALTER TABLE considerations ADD COLUMN procurement_id VARCHAR(50)'); } catch (e) {}
     try { await query('ALTER TABLE procurements ADD COLUMN is_deleted BOOLEAN DEFAULT FALSE'); } catch (e) {}
@@ -50,7 +54,10 @@ setTimeout(async () => {
             changes JSON
         ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`); 
     } catch (e) {}
-}, 1000);
+};
+
+// Export method on router for standalone execution or explicit administrative migration
+router.runAutoMigration = runAutoMigration;
 
 const toArabic = (str) => str ? str.toString().replace(/[๐-๙]/g, d => "๐๑๒๓๔๕๖๗๘๙".indexOf(d).toString()) : "";
 const toThaiNum = (num) => num.toString().replace(/\d/g, d => ['๐','๑','๒','๓','๔','๕','๖','๗','๘','๙'][parseInt(d)]);
